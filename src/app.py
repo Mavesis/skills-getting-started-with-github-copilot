@@ -8,7 +8,9 @@ for extracurricular activities at Mergington High School.
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, EmailStr
 import os
+from pathlib import Path
 from pathlib import Path
 
 app = FastAPI(title="Mergington High School API",
@@ -38,6 +40,42 @@ activities = {
         "schedule": "Mondays, Wednesdays, Fridays, 2:00 PM - 3:00 PM",
         "max_participants": 30,
         "participants": ["john@mergington.edu", "olivia@mergington.edu"]
+    },
+    "Soccer Team": {
+        "description": "Competitive soccer practice and matches",
+        "schedule": "Mon/Wed/Fri, 4:00 PM - 6:00 PM",
+        "max_participants": 22,
+        "participants": []
+    },
+    "Basketball Club": {
+        "description": "Skill drills, pickup games, and intramural play",
+        "schedule": "Tuesdays and Thursdays, 4:00 PM - 6:00 PM",
+        "max_participants": 12,
+        "participants": []
+    },
+    "Drama Club": {
+        "description": "Acting, rehearsal, and small student productions",
+        "schedule": "Thursdays, 4:00 PM - 6:00 PM",
+        "max_participants": 25,
+        "participants": []
+    },
+    "Photography Club": {
+        "description": "Learn photography techniques and portfolio building",
+        "schedule": "Wednesdays, 4:00 PM - 5:30 PM",
+        "max_participants": 15,
+        "participants": []
+    },
+    "Debate Society": {
+        "description": "Formal debate practice and interschool competitions",
+        "schedule": "Tuesdays, 4:00 PM - 5:30 PM",
+        "max_participants": 18,
+        "participants": []
+    },
+    "Robotics Club": {
+        "description": "Design and build robots; prepare for competitions",
+        "schedule": "Tuesdays and Thursdays, 4:00 PM - 6:00 PM",
+        "max_participants": 12,
+        "participants": []
     }
 }
 
@@ -51,17 +89,38 @@ def root():
 def get_activities():
     return activities
 
+class SignupRequest(BaseModel):
+    email: EmailStr
 
 @app.post("/activities/{activity_name}/signup")
-def signup_for_activity(activity_name: str, email: str):
-    """Sign up a student for an activity"""
+def signup_for_activity(activity_name: str, signup: SignupRequest):
+    """
+    Sign up a student for an activity.
+
+    Request body:
+    - email: Student's email address (string, valid email)
+
+    Possible errors:
+    - 404: Activity not found
+    - 400: Activity is full
+    - 409: Student already signed up
+    """
     # Validate activity exists
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
 
-    # Get the specific activity
     activity = activities[activity_name]
+    email = signup.email
 
-    # Add student
+    if email in activity["participants"]:
+        raise HTTPException(status_code=409, detail="Student already signed up")
+
+    if len(activity["participants"]) >= activity["max_participants"]:
+        raise HTTPException(status_code=400, detail="Activity is full")
+
     activity["participants"].append(email)
     return {"message": f"Signed up {email} for {activity_name}"}
+
+    # Add student
+    activity["participants"].append(signup.email)
+    return {"message": f"Signed up {signup.email} for {activity_name}"}
